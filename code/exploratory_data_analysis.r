@@ -25,10 +25,10 @@ library(patchwork)
 library(tictoc) # measures the time of the script
 
 # own functions
-source("Functions/save_output.R") 
-source("Functions/create_features.R")
-source("Functions/split_data.R")
-source("Functions/save_output.R")
+source("code/functions/save_output.R") 
+source("code/functions/create_features.R")
+source("code/functions/split_data.R")
+source("code/functions/save_output.R")
 
 
 
@@ -43,9 +43,9 @@ THEME <- theme_minimal()
 LEGEND <- theme(legend.title = element_blank())
 
 # read data
-tic("EDA") # start timing
+tic("Exploratory Data Analysis") # start timing
 
-df <- readRDS('Data/Fifthplay/CleanedData/finalTotC.Rda') %>% 
+df <- readRDS('data/fifthplay/cleaned_data/finalTotC.Rda') %>% 
   as_tsibble(index=Date) %>%
   # rename variable
   dplyr::rename(
@@ -243,8 +243,6 @@ p_year <- ggplot(train_features, aes(x=year, y=total_cs)) +
   labs(x="Year",y="Total Consumption") + THEME
 p_year
 
-
-
 # summarize by  month
 seasonal_month <- train_features[c("year","month","total_cs")] %>%
   dplyr::group_by(year, month) %>%
@@ -282,13 +280,11 @@ p_pacf <- ggPacf(train_features$total_cs, lag=672)+
 (p_acf/p_pacf)
 
 
-
 # Extend the regression lines beyond the domain of the data
 lag_1 <- ggplot(sample_n(train_features, 5000), 
                 aes(x=total_cs_lag001, y=total_cs)) + 
   geom_point(alpha=.5,aes(colour = day_type)) +    scale_color_brewer(palette="Dark2")+
   xlab("Total Consumption lag 1")+ylab("Total Consumption")+ THEME + LEGEND
-
 
 
 lag_96 <- ggplot(sample_n(train_features, 5000), aes(x=total_cs_lag096, y=total_cs)) + 
@@ -303,11 +299,10 @@ lag_672 <- ggplot(sample_n(train_features, 5000), aes(x=total_cs_lag672, y=total
 
 (((lag_1 + lag_96)/lag_672) + plot_layout(guides = 'collect')) 
 
-
-
-pairplot <- train_features %>% select(total_cs, total_cs_lag001,total_cs_lag096,
-                                      total_cs_lag672,year) 
-
+# construct pairplot
+pairplot <- train_features %>% 
+  select(total_cs, total_cs_lag001,
+         total_cs_lag096,total_cs_lag672,year) 
 
 pairplot[1:nrow(pairplot),1:5] %>% 
   sample_n(., size =  1000, replace = FALSE) %>% 
@@ -318,7 +313,7 @@ pairplot[1:nrow(pairplot),1:5] %>%
   "Cons_lag096","Cons_lag672"), alpha = .7) + THEME 
 
 
-toc("EDA") # end timing
+toc("Exploratory Data Analysis") # end timing
 
 
 

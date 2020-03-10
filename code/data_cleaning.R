@@ -15,9 +15,9 @@ library(plotly)
 library(GGally)
 
 # own functions
-source("Functions/read_data.R") 
-source("Functions/visualization.R")
-source("Functions/save_output.R")
+source("code/functions/read_data.R") 
+source("code/functions/visualization.R")
+source("code/functions/save_output.R")
 
 
 
@@ -41,7 +41,7 @@ LEGEND <- theme(legend.title = element_blank())
 #==============================#
 
 # read in data fifthplay
-fifth <- get_data(dir="Data/Fifthplay/",
+fifth <- get_data(dir="data/fifthplay/",
  vars=c("DateTimeMeasurement","Value"))
 
 # some summary stats
@@ -110,8 +110,7 @@ fifth_totalCs <- tibble(Date=fifth_subset$consumptionTR1$Date,
 # Total Injection fifth
 fifth_totalIj <- tibble(Date=fifth_subset$injectionTR1$Date,
   Value=(fifth_subset$injectionTR1$Value + 
-  fifth_subset$injectionTR1$Value)
-                      )
+  fifth_subset$injectionTR1$Value))
 # pv generation
 fifth_pvG<-fifth_subset$pvGeneration
 
@@ -122,7 +121,7 @@ fifth_pvG<-fifth_subset$pvGeneration
 #==============================#
 
 # read ine data from fluvius
-fluv<-get_data(dir="Data/Fluvius/")
+fluv<-get_data(dir="data/fluvius/")
 
 
 fluv_timediff <-lapply(fluv,function(df)diff(df$Date))
@@ -148,8 +147,7 @@ fluv_subset<-lapply(fluv,subset_data,
   vars=c("Date","Active","Capacitive","Inductive"))
 
 
-
-# Need to divide by 4 since it's not measured in the same unit as for fifthplay
+# !!! Need to divide by 4 since it's not measured in the same unit as for fifthplay
 # Also we only need date and Active
 fluv_inj<-select(fluv_subset$injection,c(Date,Active)) %>% 
   mutate(Active=Active/4)
@@ -157,8 +155,6 @@ fluv_cs<-select(fluv_subset$consumption,c(Date,Active)) %>%
   mutate(Active=Active/4)
 fluv_pvG<-select(fluv_subset$pv,c(Date,Active)) %>% 
   mutate(Active=Active/4)
-
-
 
 
 #==============================#
@@ -182,27 +178,24 @@ fluv_cs %>% dim() ; fifth_totalCs %>% dim()
 cs_fluvFifth <- left_join(fluv_cs,fifth_totalCs,by='Date')
 
 # rename columns
-cs_fluvFifth<-plyr::rename(cs_fluvFifth, 
+cs_fluvFifth <- plyr::rename(cs_fluvFifth, 
  c("Active"="Fluvius","Value"="Fifthplay"))
 
 # visualize
 # compare comsumption between fifth and Fluvius 
-comp_cs<-compare_fifthFluv(df=cs_fluvFifth,freq='daily',
+comp_cs <- compare_fifthFluv(df=cs_fluvFifth,freq='daily',
  ylab="Consumption")
 
-(comp_cs$figure + THEME) %>% ggplotly()
+comp_cs$figure + THEME
 
 # overview plot
-comp_cs_overview <- ggpairs(comp_cs$dataframe[,1:3]) + THEME
-ggplotly(comp_cs_overview)
-
+ggpairs(comp_cs$dataframe[,1:3]) + THEME
 
 #boxplot
-box_cons<-ggplot(melt(comp_cs$dataframe[,2:3]),
- aes(variable,value))+geom_boxplot()+xlab("")
+ggplot(melt(comp_cs$dataframe[,2:3]),
+ aes(variable,value)) + geom_boxplot() + xlab("") + THEME
 
 
-ggplotly(box_cons)
 
 #==============================#
 # 2) Injection
@@ -223,24 +216,23 @@ dim(inj_fluvFifth)
 
 
 # rename columns
-inj_fluvFifth<-plyr::rename(inj_fluvFifth, 
+inj_fluvFifth <- plyr::rename(inj_fluvFifth, 
  c("Active"="Fluvius","Value"="Fifthplay"))
 
 # compare comsumption between fifth and Fluvius 
-comp_Inj<-compare_fifthFluv(df=inj_fluvFifth,
+comp_Inj <- compare_fifthFluv(df=inj_fluvFifth,
   freq='daily',ylab="Injection")
-ggplotly(comp_Inj$figure)
+comp_Inj$figure + THEME
 
 
 # overview plot
-comp_inj_overview<-ggpairs(comp_Inj$dataframe[,1:3])
-ggplotly(comp_inj_overview)
+ggpairs(comp_Inj$dataframe[,1:3]) + THEME
 
 #boxplot
-box_inj<-ggplot(melt(comp_Inj$dataframe[,2:3]),
-   aes(variable,value))+geom_boxplot()+xlab("")
+ggplot(melt(comp_Inj$dataframe[,2:3]),
+   aes(variable,value)) + geom_boxplot() + xlab("") + THEME
 
-ggplotly(box_inj)
+
 
 
 #==============================#
@@ -268,30 +260,19 @@ pvGen_fluvFifth <- plyr::rename(pvGen_fluvFifth,
 # compare comsumption between fifth and Fluvius 
 comp_pvGen <- compare_fifthFluv(df=pvGen_fluvFifth,
   freq='daily',ylab="Pv Generation")
-ggplotly(comp_pvGen$figure + THEME)
+comp_pvGen$figure + THEME
 
 # overview plot
-comp_pGen_overview <- ggpairs(comp_pvGen$dataframe[,1:3])
-ggplotly(comp_pGen_overview + THEME)
+ggpairs(comp_pvGen$dataframe[,1:3]) + THEME
 
 
 #boxplot
-box_pvGen <- ggplot(melt(comp_pvGen$dataframe[,2:3]),
+ggplot(melt(comp_pvGen$dataframe[,2:3]),
   aes(variable,value)) + geom_boxplot() + xlab("") + THEME
-
-ggplotly(box_pvGen)
 
 #==============================#
 # 4) Total consumption
 #==============================#
-
-
-# TODO: First of all check if the comparisons are correct : ASK
-# How are we going to compute??
-# on the individuel level or aggregate level?
-# For now let's go with the aggregate level at the end
-# make everything ready for imputation
-
 
 # From there you can get consumption, PV and injection data. 
 # Note that consumption here means the consumption from the grid only; 
@@ -318,7 +299,7 @@ fluvFifth_totC <- tibble(Date=fluv_cs$Date,
     pvGen_fluvFifth$Fifthplay-
     inj_fluvFifth$Fifthplay))
 
-# inteval is 15 min
+# interval is 15 min
 summary(as.integer(diff(fluvFifth_totC$Date)))
 
 # start: 2017-05-31 13:00:00 
@@ -337,29 +318,19 @@ compare_totalcs$figure + geom_line(alpha = .5)+
   labs(colour="") + scale_color_brewer(palette="Set1") + THEME + 
   theme(legend.position="top")
 
-  
-ggplotly(figure0_thesis)
-
 
 # scatterplot
-compare_totalcs_scat <- ggplot(compare_totalcs$dataframe, 
+ggplot(compare_totalcs$dataframe, 
                          aes(x=Fluvius, y=Fifthplay, text = Date)) + 
-                         geom_point(size=1.5)
-compare_totalcs_scat
-ggplotly(compare_totalcs_scat)
-
+                         geom_point(size=1.5) + THEME
 
 # overview plot
-compare_totalcs_overview <- ggpairs(compare_totalcs$dataframe[1:3])
-ggplotly(compare_totalcs_overview)
+ggpairs(compare_totalcs$dataframe[1:3]) + THEME
 
 
 #boxplot
-box_totalcs <- ggplot(melt(compare_totalcs$dataframe[2:3]),
-  aes(variable,value))+geom_boxplot()+xlab("")
-
-ggplotly(box_totalcs)
-
+ggplot(melt(compare_totalcs$dataframe[2:3]),
+  aes(variable,value)) + geom_boxplot() + xlab("") + THEME
 
 #===================================================
 # Missing values imputation: use values from fluvius
@@ -385,6 +356,10 @@ head(df_FifthCleaned[df_FifthCleaned$Date>"2017-10-29",],20)
 # interval should be 15 min
 diff(df_FifthCleaned$Date) %>% as.integer() %>% summary()
 
+# zero values in the dataset
+df_FifthCleaned$TotalCs_imp %>% summary()
+df_FifthCleaned %>% filter(TotalCs_imp==0) %>% nrow
+
 
 # impute zero values
 df_FifthCleaned$TotalCs_imp <- na.spline(replace(df_FifthCleaned$TotalCs_imp, 
@@ -396,13 +371,13 @@ df_FifthCleaned$TotalCs_imp <- na.spline(replace(df_FifthCleaned$TotalCs_imp,
 diff(df_FifthCleaned$Date) %>% as.integer(.) %>% summary(.)
 
 # cvs file
-save_output(output_dir="Data/Fifthplay/CleanedData", 
+save_output(output_dir="data/fifthplay/cleaned_data", 
             FUN=write.csv,
             x=df_FifthCleaned,
             file="finalTotC.csv")
 
 # save as R object
-save_output(output_dir="Data/Fifthplay/CleanedData", 
+save_output(output_dir="data/fifthplay/cleaned_data", 
             FUN=saveRDS,
             object=df_FifthCleaned,
             file="finalTotC.Rda")

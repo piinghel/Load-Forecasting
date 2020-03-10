@@ -34,13 +34,11 @@ library(reshape2)
 library(forecast) # (partial) autocorrelation plots
 
 # custom functions
-source("Functions/split_data.R")
-source("Functions/create_features.R")
-source("Functions/error_analysis.R")
-source("Functions/tidy_model_helper.R")
-source("Functions/save_output.R")
-
-
+source("code/functions/split_data.R")
+source("code/functions/create_features.R")
+source("code/functions/error_analysis.R")
+source("code/functions/tidy_model_helper.R")
+source("code/functions/save_output.R")
 
 
 # library(doParallel)
@@ -91,7 +89,7 @@ NUM_VIP <- 10
 #=====================================================#
 #  import data and split data
 #=====================================================#
-list_df<-readRDS('Data/Fifthplay/CleanedData/FinalTotC.Rda') %>% 
+list_df<-readRDS('data/fifthplay/Cleaned_data/finalTotC.Rda') %>% 
   # sample a certain fraction to try out some things (work faster)
   slice(., 1:20000) %>%
   as_tsibble(index=Date) %>%
