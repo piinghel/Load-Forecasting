@@ -4,11 +4,11 @@
 #' 
 #' @param df: dataframe, 
 #' @param output_dir: string indicating the directory to save
-#' @param FUN: function 
+#' @param FUN: function to save the data
 #' @param ...: additional arguments for the function
 #' @return  print where the file was saved
 
-save_output<-function(output_dir, FUN,...){
+save_output<-function(output_dir=NULL, FUN=write.csv,...){
   
   # get working directory
   working_dir<-getwd()
@@ -18,7 +18,7 @@ save_output<-function(output_dir, FUN,...){
     # set directory where to save
     setwd(output_dir)
     FUN(...)
-    cat("saved in \"",output_dir,"\"","directory")
+    cat("saved in \"",output_dir,"\"","directory\n")
     # back to the original wd 
     setwd(working_dir)
     
@@ -26,7 +26,7 @@ save_output<-function(output_dir, FUN,...){
     # set directory where to save
     setwd(output_dir)
     FUN(...)
-    cat("saved in \"",output_dir,"\"","directory")
+    cat("saved in \"",output_dir,"\"","directory\n")
     # back to the original wd 
     setwd(working_dir)
   }

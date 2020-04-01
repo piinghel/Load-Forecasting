@@ -1,4 +1,4 @@
-rm(list=ls())
+rm(list = ls())
 
 library(tsibble)
 library(tidyverse)
@@ -15,7 +15,7 @@ library(plotly)
 library(GGally)
 
 # own functions
-source("code/functions/read_data.R") 
+source("code/functions/read_data.R")
 source("code/functions/visualization.R")
 source("code/functions/save_output.R")
 
@@ -29,10 +29,18 @@ tic("Data Cleaning") # start timing
 # Global parameters ---------------------------------------
 
 # colors
-cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", 
-               "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbPalette <- c(
+  "#999999",
+  "#E69F00",
+  "#56B4E9",
+  "#009E73",
+  "#F0E442",
+  "#0072B2",
+  "#D55E00",
+  "#CC79A7"
+)
 
-THEME <- theme_minimal()
+THEME <- theme_gray() #theme_minimal()
 LEGEND <- theme(legend.title = element_blank())
 
 
@@ -41,120 +49,145 @@ LEGEND <- theme(legend.title = element_blank())
 #==============================#
 
 # read in data fifthplay
-fifth <- get_data(dir="data/fifthplay/",
- vars=c("DateTimeMeasurement","Value"))
+fifth <- get_data(dir = "data/fifthplay/",
+                  vars = c("DateTimeMeasurement", "Value")) 
 
 # some summary stats
-lapply(fifth,summary)
+lapply(fifth, summary)
 
 # NA values?
-lapply(fifth,anyNA)
+lapply(fifth, anyNA)
 
 # check whether time interval is subsequently 15 mins constant
-fifth_timediff <- lapply(fifth,function(df)diff(df$Date))
+fifth_timediff <- lapply(fifth, function(df)
+  diff(df$date))
 
 
 # there are periods of jumps sometimes weeks of missing data
 # therefore when comparing data with fluvious check if timestamps match
-lapply(fifth_timediff,function(df)summary(as.integer(df)))
+lapply(fifth_timediff, function(df)
+  summary(as.integer(df)))
 
 # % of data where the time interval is 15%
-sum(fifth_timediff$consumptionTR1==15)/length(fifth_timediff$consumptionTR1)
+sum(fifth_timediff$consumption_tr1 == 15) / length(fifth_timediff$consumption_tr1)
 
 
-subset_data <- function(df,start,end, vars=NULL){
-  if (is.null(vars)) {vars=c(colnames(df))}
-  df[df$Date >= start & df$Date <= end,vars]
+subset_data <- function(df, start, end, vars = NULL) {
+  if (is.null(vars)) {
+    vars = c(colnames(df))
+  }
+  df[df$date >= start & df$date <= end, vars]
 }
 
-fifth$consumptionTR1[2:dim(fifth$consumptionTR1)[1],][
-  fifth_timediff$consumptionTR1==35700.00,]
+fifth$consumption_tr1[2:dim(fifth$consumption_tr1)[1], ][fifth_timediff$consumption_tr1 ==
+                                                         35700.00, ]
 
-# for example there is almost a month between these two dates 
+# for example there is almost a month between these two dates
 # this might be probablematic for modelling, espically such long periods
 # hopefully we can impute these data based on the fluvius dataset
-subset_data(fifth$consumptionTR1,
-  start="2018-03-09 13:15:00",
-  end="2018-04-03 09:15:00",
-  vars=c("Date","Value"))
+subset_data(
+  fifth$consumption_tr1,
+  start = "2018-03-09 13:15:00",
+  end = "2018-04-03 09:15:00",
+  vars = c("date", "value")
+)
 
 # Maximum minimum date to start: "2017-05-31 13:00:00 CEST"
-lapply(fifth,function(df)head(df$Date,1))
+lapply(fifth, function(df)
+  head(df$date, 1))
 # Minimum Maximum date to end: "2020-02-05 23:45:00 CET"
-lapply(fifth,function(df)tail(df$Date,1))
+lapply(fifth, function(df)
+  tail(df$date, 1))
 
 
-# take the max minimum time and the minimum max time 
+# take the max minimum time and the minimum max time
 # based on both the fluvius and fifth dataset
-fifth_subset <- lapply(fifth,subset_data,
- start = "2017-05-31 13:00:00 CEST",
- end = "2020-02-05 23:45:00 CET",
- vars=c("Date","Value"))
+fifth_subset <- lapply(
+  fifth,
+  subset_data,
+  start = "2017-05-31 13:00:00 CEST",
+  end = "2020-02-05 23:45:00 CET",
+  vars = c("date", "value")
+)
 
 
 # Check if first date and last date are the same of all dataframes
-lapply(fifth_subset,head)
-lapply(fifth_subset,tail)
+lapply(fifth_subset, head)
+lapply(fifth_subset, tail)
 
 
 #check whether lengths are equal: NOPE
-lapply(fifth_subset,dim)
+lapply(fifth_subset, dim)
 
 
 # Total Consumption fifth
-fifth_totalCs <- tibble(Date=fifth_subset$consumptionTR1$Date,
-  Value=(fifth_subset$consumptionTR1$Value + 
-  fifth_subset$consumptionTR2$Value)
-                      )
+fifth_total_cs <- tibble(
+  date = fifth_subset$consumption_tr1$date,
+  value = (
+    fifth_subset$consumption_tr1$value +
+      fifth_subset$consumption_tr2$value
+  )
+)
 
 # Total Injection fifth
-fifth_totalIj <- tibble(Date=fifth_subset$injectionTR1$Date,
-  Value=(fifth_subset$injectionTR1$Value + 
-  fifth_subset$injectionTR1$Value))
+fifth_total_injection <- tibble(
+  date = fifth_subset$injection_tr1$date,
+  value = (
+    fifth_subset$injection_tr1$value +
+      fifth_subset$injection_tr1$value
+  )
+)
 # pv generation
-fifth_pvG<-fifth_subset$pvGeneration
+fifth_pv <- fifth_subset$pv_generation
 
 
 
 #==============================#
-# DATA FROM FLUVIUS
+# DATA FROM fluvius
 #==============================#
 
 # read ine data from fluvius
-fluv<-get_data(dir="data/fluvius/")
+fluv <- get_data(dir = "data/fluvius/")
 
 
-fluv_timediff <-lapply(fluv,function(df)diff(df$Date))
+fluv_timediff <- lapply(fluv, function(df)
+  diff(df$date))
 
 # here all data is 15min constant (this is how it should be)
-lapply(fluv_timediff,function(df)summary(as.integer(df)))
+lapply(fluv_timediff, function(df)
+  summary(as.integer(df)))
 
 lapply(fluv, dim)
-lapply(fluv,head)
-lapply(fluv,tail)
+lapply(fluv, head)
+lapply(fluv, tail)
 
 
 # Maximum minimum date to start: "2016-02-18 00:15:00 CET"
-lapply(fluv,function(df)head(df$Date,1))
+lapply(fluv, function(df)
+  head(df$date, 1))
 
-# Minimum Maximum date to end: "2019-11-15 CET"
-lapply(fluv,function(df)tail(df$Date,1))
+# Minimum Maximum date to end: "2020-02-03 CET"
+lapply(fluv, function(df)
+  tail(df$date, 1))
 
 # take the same start and end date as fifth
-fluv_subset<-lapply(fluv,subset_data,
+fluv_subset <- lapply(
+  fluv,
+  subset_data,
   start = "2017-05-31 13:00:00 CEST",
-  end = "2019-11-15 CET",
-  vars=c("Date","Active","Capacitive","Inductive"))
+  end = "2020-02-03 CET",
+  vars = c("date", "active", "capacitive", "inductive")
+)
 
 
-# !!! Need to divide by 4 since it's not measured in the same unit as for fifthplay
-# Also we only need date and Active
-fluv_inj<-select(fluv_subset$injection,c(Date,Active)) %>% 
-  mutate(Active=Active/4)
-fluv_cs<-select(fluv_subset$consumption,c(Date,Active)) %>% 
-  mutate(Active=Active/4)
-fluv_pvG<-select(fluv_subset$pv,c(Date,Active)) %>% 
-  mutate(Active=Active/4)
+# !!! need to divide by 4 since it's not measured in the same unit as for fifthplay
+# Also we only need date and active !!!
+fluv_inj <- select(fluv_subset$injection, c(date, active)) %>%
+  mutate(active = active / 4)
+fluv_cs <- select(fluv_subset$consumption, c(date, active)) %>%
+  mutate(active = active / 4)
+fluv_pv <- select(fluv_subset$pv, c(date, active)) %>%
+  mutate(active = active / 4)
 
 
 #==============================#
@@ -167,162 +200,180 @@ fluv_pvG<-select(fluv_subset$pv,c(Date,Active)) %>%
 
 
 # check both the same ending and starting date
-fluv_cs %>% head() ; fifth_totalCs %>% tail()
-fifth_totalCs %>% head(); fifth_totalCs %>% tail()
+fluv_cs %>% head()
+fifth_total_cs %>% tail()
+fifth_total_cs %>% head()
+fifth_total_cs %>% tail()
 
 # but still different lengths
-fluv_cs %>% dim() ; fifth_totalCs %>% dim()
+fluv_cs %>% dim()
+fifth_total_cs %>% dim()
 
 # left outer join based on same date
 # this will result in NA values
-cs_fluvFifth <- left_join(fluv_cs,fifth_totalCs,by='Date')
+cs_fluv_fifth <- left_join(fluv_cs, fifth_total_cs, by = 'date')
 
 # rename columns
-cs_fluvFifth <- plyr::rename(cs_fluvFifth, 
- c("Active"="Fluvius","Value"="Fifthplay"))
+cs_fluv_fifth <- plyr::rename(cs_fluv_fifth,
+                             c("active" = "fluvius", "value" = "fifthplay"))
 
 # visualize
-# compare comsumption between fifth and Fluvius 
-comp_cs <- compare_fifthFluv(df=cs_fluvFifth,freq='daily',
- ylab="Consumption")
+# compare comsumption between fifth and fluvius
+comp_cs <- compare_fifthFluv(df = cs_fluv_fifth, freq = 'daily',
+                             ylab = "Consumption")
 
 comp_cs$figure + THEME
 
 # overview plot
-ggpairs(comp_cs$dataframe[,1:3]) + THEME
+ggpairs(comp_cs$dataframe[, 1:3]) + THEME
 
 #boxplot
-ggplot(melt(comp_cs$dataframe[,2:3]),
- aes(variable,value)) + geom_boxplot() + xlab("") + THEME
-
-
+ggplot(melt(comp_cs$dataframe[, 2:3]),
+       aes(variable, value)) + geom_boxplot() + xlab("") + THEME
 
 #==============================#
 # 2) Injection
 #==============================#
 
 # check both the same ending and starting date
-head(fluv_inj);tail(fluv_inj)
-head(fifth_totalIj);tail(fifth_totalIj)
+head(fluv_inj)
+tail(fluv_inj)
+head(fifth_total_injection)
+tail(fifth_total_injection)
 
 # but still different lengths
-dim(fluv_inj);dim(fifth_totalIj)
+dim(fluv_inj)
+dim(fifth_total_injection)
 
 # left outer join based on same date
 # this will result in NA values
-inj_fluvFifth<-left_join(fluv_inj,fifth_totalIj,by='Date')
-head(inj_fluvFifth)
-dim(inj_fluvFifth)
+inj_fluv_fifth <- left_join(fluv_inj, fifth_total_injection, by = 'date')
+head(inj_fluv_fifth)
+dim(inj_fluv_fifth)
 
 
 # rename columns
-inj_fluvFifth <- plyr::rename(inj_fluvFifth, 
- c("Active"="Fluvius","Value"="Fifthplay"))
+inj_fluv_fifth <- plyr::rename(inj_fluv_fifth,
+                              c("active" = "fluvius", "value" = "fifthplay"))
 
-# compare comsumption between fifth and Fluvius 
-comp_Inj <- compare_fifthFluv(df=inj_fluvFifth,
-  freq='daily',ylab="Injection")
-comp_Inj$figure + THEME
+# compare comsumption between fifth and fluvius
+comp_inj <- compare_fifthFluv(df = inj_fluv_fifth,
+                              freq = 'daily', ylab = "Injection")
+comp_inj$figure + THEME
 
 
 # overview plot
-ggpairs(comp_Inj$dataframe[,1:3]) + THEME
+ggpairs(comp_inj$dataframe[, 1:3]) + THEME
 
 #boxplot
-ggplot(melt(comp_Inj$dataframe[,2:3]),
-   aes(variable,value)) + geom_boxplot() + xlab("") + THEME
-
-
+ggplot(melt(comp_inj$dataframe[, 2:3]),
+       aes(variable, value)) + geom_boxplot() + xlab("") + THEME
 
 
 #==============================#
 # 3) Pv generation
 #==============================#
 
-head(fifth_pvG);tail(fifth_pvG)
-head(fluv_pvG);tail(fluv_pvG)
+head(fifth_pv)
+tail(fifth_pv)
+head(fluv_pv)
+tail(fluv_pv)
 
 
 # but still different lengths
-dim(fluv_pvG);dim(fifth_pvG)
+dim(fluv_pv)
+dim(fifth_pv)
 
 # inner join based on same date
 # left outer join based on same date
 # this will result in NA values
-pvGen_fluvFifth <- left_join(fluv_pvG,fifth_pvG,by='Date')
+pv_gen_fluvFifth <- left_join(fluv_pv, fifth_pv, by = 'date')
 
 
 # rename columns
-pvGen_fluvFifth <- plyr::rename(pvGen_fluvFifth, 
-  c("Active"="Fluvius","Value"="Fifthplay"))
+pvGen_fluvFifth <- plyr::rename(pv_gen_fluvFifth,
+                                c("active" = "fluvius", "value" = "fifthplay"))
 
 
-# compare comsumption between fifth and Fluvius 
-comp_pvGen <- compare_fifthFluv(df=pvGen_fluvFifth,
-  freq='daily',ylab="Pv Generation")
-comp_pvGen$figure + THEME
+# compare comsumption between fifth and fluvius
+comp_pv <- compare_fifthFluv(df = pvGen_fluvFifth,
+                                freq = 'daily', ylab = "Pv Generation")
+comp_pv$figure + THEME
 
 # overview plot
-ggpairs(comp_pvGen$dataframe[,1:3]) + THEME
+ggpairs(comp_pv$dataframe[, 1:3]) + THEME
 
 
 #boxplot
-ggplot(melt(comp_pvGen$dataframe[,2:3]),
-  aes(variable,value)) + geom_boxplot() + xlab("") + THEME
+ggplot(melt(comp_pv$dataframe[, 2:3]),
+       aes(variable, value)) + geom_boxplot() + xlab("") + THEME
 
 #==============================#
 # 4) Total consumption
 #==============================#
 
-# From there you can get consumption, PV and injection data. 
-# Note that consumption here means the consumption from the grid only; 
-# the building also consumes energy coming from the PV installation. 
+# From there you can get consumption, PV and injection data.
+# Note that consumption here means the consumption from the grid only;
+# the building also consumes energy coming from the PV installation.
 # So the total consumption can be calculated via the following formula:
 # Total consumption = consumption + PV - Injection
 
 
 # using variable active to compute total consumption
-fluvFifth_totC <- tibble(Date=fluv_cs$Date,
-  fluv_consAct = cs_fluvFifth$Fluvius,
-  fluv_pvAct = pvGen_fluvFifth$Fluvius,
-  fluv_injAct = inj_fluvFifth$Fluvius,
-  fifth_cons = cs_fluvFifth$Fifthplay,
-  fifth_inj = pvGen_fluvFifth$Fifthplay,
-  fifth_pvG = inj_fluvFifth$Fifthplay,
-  #  total consumption FLUVIUS: 
-  fluv_TotalCs=(
-  cs_fluvFifth$Fluvius + 
-    pvGen_fluvFifth$Fluvius-
-    inj_fluvFifth$Fluvius),
-  #  total consumption FIFTH:              
-  fifth_TotalCs = (cs_fluvFifth$Fifthplay +
-    pvGen_fluvFifth$Fifthplay-
-    inj_fluvFifth$Fifthplay))
+fluv_fifth_tot_c <- tibble(
+  date = fluv_cs$date,
+  fluv_consAct = cs_fluv_fifth$fluvius,
+  fluv_pvAct = pvGen_fluvFifth$fluvius,
+  fluv_injAct = inj_fluv_fifth$fluvius,
+  fifth_cons = cs_fluv_fifth$fifthplay,
+  fifth_inj = pvGen_fluvFifth$fifthplay,
+  fifth_pv = inj_fluv_fifth$fifthplay,
+  #  total consumption fluvius:
+  fluv_total_cs = (
+    cs_fluv_fifth$fluvius +
+      pvGen_fluvFifth$fluvius -
+      inj_fluv_fifth$fluvius
+  ),
+  #  total consumption FIFTH:
+  fifth_total_cs = (
+    cs_fluv_fifth$fifthplay +
+      pvGen_fluvFifth$fifthplay -
+      inj_fluv_fifth$fifthplay
+  )
+)
 
 # interval is 15 min
-summary(as.integer(diff(fluvFifth_totC$Date)))
+summary(as.integer(diff(fluv_fifth_tot_c$date)))
 
-# start: 2017-05-31 13:00:00 
-# end: 2019-09-09 00:00:00
-head(fluvFifth_totC);tail(fluvFifth_totC)
+# start: 2017-05-31 13:00:00
+# 2020-02-03 00:00:00
+head(fluv_fifth_tot_c)
+tail(fluv_fifth_tot_c)
 
 
-# compare comsumption between fifth and Fluvius 
+# compare comsumption between fifth and fluvius
 
-compare_totalcs <- fluvFifth_totC %>% 
-  select(Date,fluv_TotalCs,fifth_TotalCs) %>%
-  plyr::rename(.,c("fluv_TotalCs"="Fluvius","fifth_TotalCs"="Fifthplay")) %>%
-  compare_fifthFluv(df=.,freq='daily',ylab="Total Consumption")
+compare_totalcs <- fluv_fifth_tot_c %>%
+  select(date, fluv_total_cs, fifth_total_cs) %>%
+  plyr::rename(., c("fluv_total_cs" = "fluvius", "fifth_total_cs" = "fifthplay")) %>%
+  compare_fifthFluv(df = ., freq = '15 min', ylab = "Total Consumption")
 
-compare_totalcs$figure + geom_line(alpha = .5)+
-  labs(colour="") + scale_color_brewer(palette="Set1") + THEME + 
-  theme(legend.position="top")
+compare_totalcs$figure + geom_line(alpha = .5) +
+  labs(colour = "") + scale_color_brewer(palette = "Set1") + THEME +
+  theme(legend.position = "top") + labs(x="Date", y="Total Building Consumption")
 
+# save figure
+save_output(output_dir = "output/figures", 
+            FUN=ggsave,filename = "figure1.png", 
+            device = "png",
+            height = 9,
+            width = 12,
+            unit = "cm")
 
 # scatterplot
-ggplot(compare_totalcs$dataframe, 
-                         aes(x=Fluvius, y=Fifthplay, text = Date)) + 
-                         geom_point(size=1.5) + THEME
+ggplot(compare_totalcs$dataframe,
+       aes(x = fluvius, y = fifthplay, text = date)) +
+  geom_point(size = 1.5) + THEME
 
 # overview plot
 ggpairs(compare_totalcs$dataframe[1:3]) + THEME
@@ -330,70 +381,65 @@ ggpairs(compare_totalcs$dataframe[1:3]) + THEME
 
 #boxplot
 ggplot(melt(compare_totalcs$dataframe[2:3]),
-  aes(variable,value)) + geom_boxplot() + xlab("") + THEME
+       aes(variable, value)) + geom_boxplot() + xlab("") + THEME
 
 #===================================================
 # Missing values imputation: use values from fluvius
 #===================================================
 
 
-# Impute missing values and only select the columns 
-# Date and Imputed column of fifthplay
-df_FifthCleaned <- fluvFifth_totC %>%
-  mutate(TotalCs_imp = if_else(is.na(fifth_TotalCs), 
-  fluv_TotalCs,fifth_TotalCs)) %>%
-  select(c(Date,TotalCs_imp))  
+# Impute missing values and only select the columns
+# date and Imputed column of fifthplay
+df_fifth_cleaned <- fluv_fifth_tot_c %>%
+  mutate(total_cs = if_else(is.na(fifth_total_cs),
+                               fluv_total_cs, fifth_total_cs)) %>%
+  select(c(date, total_cs))
 
 
 # Check for missing values
-anyNA(df_FifthCleaned$TotalCs_imp)
+anyNA(df_fifth_cleaned$total_cs)
 
-# Dates should be unique
-df_FifthCleaned
-head(df_FifthCleaned[df_FifthCleaned$Date>"2017-10-29",],20)
+# dates should be unique
+df_fifth_cleaned
+head(df_fifth_cleaned[df_fifth_cleaned$date > "2017-10-29", ], 20)
 
 
 # interval should be 15 min
-diff(df_FifthCleaned$Date) %>% as.integer() %>% summary()
+diff(df_fifth_cleaned$date) %>% as.integer() %>% summary()
 
 # zero values in the dataset
-df_FifthCleaned$TotalCs_imp %>% summary()
-df_FifthCleaned %>% filter(TotalCs_imp==0) %>% nrow
+df_fifth_cleaned$total_cs %>% summary()
+df_fifth_cleaned %>% filter(total_cs == 0) %>% nrow
 
 
 # impute zero values
-df_FifthCleaned$TotalCs_imp <- na.spline(replace(df_FifthCleaned$TotalCs_imp, 
-                             df_FifthCleaned$TotalCs_imp == 0, NA))
+df_fifth_cleaned$total_cs <-
+  na.spline(replace(
+    df_fifth_cleaned$total_cs,
+    df_fifth_cleaned$total_cs == 0,
+    NA
+  ))
 
-# save cleaned data 
+# save cleaned data
 
 # interval should be still 15 min
-diff(df_FifthCleaned$Date) %>% as.integer(.) %>% summary(.)
+diff(df_fifth_cleaned$date) %>% as.integer(.) %>% summary(.)
 
 # cvs file
-save_output(output_dir="data/fifthplay/cleaned_data", 
-            FUN=write.csv,
-            x=df_FifthCleaned,
-            file="finalTotC.csv")
+save_output(
+  output_dir = "data/cleaned_data",
+  FUN = write.csv,
+  x = df_fifth_cleaned,
+  file = "final_tot_c.csv"
+)
 
 # save as R object
-save_output(output_dir="data/fifthplay/cleaned_data", 
-            FUN=saveRDS,
-            object=df_FifthCleaned,
-            file="finalTotC.Rda")
+save_output(
+  output_dir = "data/cleaned_data",
+  FUN = saveRDS,
+  object = df_fifth_cleaned,
+  file = "final_tot_c.Rda"
+)
 
 
 toc() # end timing
-
-
-
-
-
-
-
-
-
-
-
-
-
