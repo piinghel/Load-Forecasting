@@ -11,7 +11,7 @@
 save_output<-function(output_dir=NULL, FUN=write.csv,...){
   
   # get working directory
-  working_dir<-getwd()
+  working_dir <- getwd()
   # combine path and filename
   if (!dir.exists(output_dir)){
     dir.create(output_dir)

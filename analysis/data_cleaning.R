@@ -1,5 +1,11 @@
+# clean memory
 rm(list = ls())
 
+# --------------------------------------------------------------------
+# 0) Load libraries
+# --------------------------------------------------------------------
+
+# data manipulation
 library(tsibble)
 library(tidyverse)
 library(lubridate)
@@ -15,10 +21,10 @@ library(plotly)
 library(GGally)
 
 # own functions
-source("code/functions/read_data.R")
-source("code/functions/visualization.R")
-source("code/functions/save_output.R")
-
+source("analysis/functions/read_data.R")
+source("analysis/functions/visualization.R")
+source("analysis/functions/save_output.R")
+source("analysis/functions/split_data.R")
 
 
 # https://st-dev-data-api.azurewebsites.net/apidocs/
@@ -26,7 +32,9 @@ source("code/functions/save_output.R")
 
 tic("Data Cleaning") # start timing
 
-# Global parameters ---------------------------------------
+# --------------------------------------------------------------------
+#  1) Global parameters 
+# --------------------------------------------------------------------
 
 # colors
 cbPalette <- c(
@@ -43,10 +51,13 @@ cbPalette <- c(
 THEME <- theme_gray() #theme_minimal()
 LEGEND <- theme(legend.title = element_blank())
 
+# --------------------------------------------------------------------
+#  2) Load Data 
+# --------------------------------------------------------------------
 
-#==============================#
-# DATA FROM FIFTH
-#==============================#
+# --------------------------------------------------------------------
+# 2.1) data from fifthplay
+# --------------------------------------------------------------------
 
 # read in data fifthplay
 fifth <- get_data(dir = "data/fifthplay/",
@@ -62,6 +73,8 @@ lapply(fifth, anyNA)
 fifth_timediff <- lapply(fifth, function(df)
   diff(df$date))
 
+
+format_iso_8601
 
 # there are periods of jumps sometimes weeks of missing data
 # therefore when comparing data with fluvious check if timestamps match
@@ -142,9 +155,9 @@ fifth_pv <- fifth_subset$pv_generation
 
 
 
-#==============================#
-# DATA FROM fluvius
-#==============================#
+# --------------------------------------------------------------------
+# 2.2) DATA FROM fluvius
+# --------------------------------------------------------------------
 
 # read ine data from fluvius
 fluv <- get_data(dir = "data/fluvius/")
@@ -190,13 +203,13 @@ fluv_pv <- select(fluv_subset$pv, c(date, active)) %>%
   mutate(active = active / 4)
 
 
-#==============================#
-# COMPARE DATA
-#==============================#
+# --------------------------------------------------------------------
+#  3) COMPARE DATA
+# --------------------------------------------------------------------
 
-#==============================#
-# 1) Consumption
-#==============================#
+# --------------------------------------------------------------------
+# 3.1) Consumption
+# --------------------------------------------------------------------
 
 
 # check both the same ending and starting date
@@ -231,9 +244,9 @@ ggpairs(comp_cs$dataframe[, 1:3]) + THEME
 ggplot(melt(comp_cs$dataframe[, 2:3]),
        aes(variable, value)) + geom_boxplot() + xlab("") + THEME
 
-#==============================#
-# 2) Injection
-#==============================#
+# --------------------------------------------------------------------
+# 3.2) Injection
+# --------------------------------------------------------------------
 
 # check both the same ending and starting date
 head(fluv_inj)
@@ -270,9 +283,9 @@ ggplot(melt(comp_inj$dataframe[, 2:3]),
        aes(variable, value)) + geom_boxplot() + xlab("") + THEME
 
 
-#==============================#
-# 3) Pv generation
-#==============================#
+# --------------------------------------------------------------------
+# 3.3) Pv generation
+# --------------------------------------------------------------------
 
 head(fifth_pv)
 tail(fifth_pv)
@@ -308,9 +321,9 @@ ggpairs(comp_pv$dataframe[, 1:3]) + THEME
 ggplot(melt(comp_pv$dataframe[, 2:3]),
        aes(variable, value)) + geom_boxplot() + xlab("") + THEME
 
-#==============================#
-# 4) Total consumption
-#==============================#
+# --------------------------------------------------------------------
+# 3.4) Total consumption
+# --------------------------------------------------------------------
 
 # From there you can get consumption, PV and injection data.
 # Note that consumption here means the consumption from the grid only;
@@ -318,6 +331,7 @@ ggplot(melt(comp_pv$dataframe[, 2:3]),
 # So the total consumption can be calculated via the following formula:
 # Total consumption = consumption + PV - Injection
 
+fluv_cs$date %>% tail
 
 # using variable active to compute total consumption
 fluv_fifth_tot_c <- tibble(
@@ -340,7 +354,7 @@ fluv_fifth_tot_c <- tibble(
       pvGen_fluvFifth$fifthplay -
       inj_fluv_fifth$fifthplay
   )
-)
+) %>% as_tsibble(., index = date)
 
 # interval is 15 min
 summary(as.integer(diff(fluv_fifth_tot_c$date)))
@@ -383,9 +397,10 @@ ggpairs(compare_totalcs$dataframe[1:3]) + THEME
 ggplot(melt(compare_totalcs$dataframe[2:3]),
        aes(variable, value)) + geom_boxplot() + xlab("") + THEME
 
-#===================================================
-# Missing values imputation: use values from fluvius
-#===================================================
+
+# --------------------------------------------------------------------
+# 4) Missing values imputation: use values from fluvius
+# --------------------------------------------------------------------
 
 
 # Impute missing values and only select the columns
@@ -420,20 +435,29 @@ df_fifth_cleaned$total_cs <-
     NA
   ))
 
-# save cleaned data
-
 # interval should be still 15 min
-diff(df_fifth_cleaned$date) %>% as.integer(.) %>% summary(.)
+diff(df_fifth_cleaned$date) %>% as.integer %>% summary
 
-# cvs file
+df_fifth_cleaned %>% select(date) %>% duplicated %>% sum
+
+
+
+# --------------------------------------------------------------------
+# 5) save cleaned data
+# --------------------------------------------------------------------
+
+
+# save cleaned data as cvs file
 save_output(
   output_dir = "data/cleaned_data",
   FUN = write.csv,
   x = df_fifth_cleaned,
-  file = "final_tot_c.csv"
+  file = "final_tot_c",
+  row.names=FALSE
 )
 
-# save as R object
+
+# save cleaned data as Rda object
 save_output(
   output_dir = "data/cleaned_data",
   FUN = saveRDS,
@@ -441,5 +465,47 @@ save_output(
   file = "final_tot_c.Rda"
 )
 
+# split data in training/validation/training_validation/test set
 
-toc() # end timing
+# 1) original unit
+split_data(
+  df = df_fifth_cleaned,
+  train_perc = .6,
+  validation_perc = .2,
+  embargo = 0,
+  save = TRUE,
+  return_split = FALSE,
+  output_dir = "data/cleaned_data/split_original"
+)
+
+
+# 2) summarize to hourly units
+
+df_fifth_cleaned_hourly <- df_fifth_cleaned %>% 
+  
+  tsibble::index_by(
+  # there is a difference between floor_date and ceiling_date
+  date_h = lubridate::floor_date(date, "1 hour")
+  ) %>% 
+  dplyr::summarise(total_cs = sum(total_cs)) %>%
+  # again rename
+  dplyr::rename(
+    date = date_h
+)
+
+split_data(
+  df = df_fifth_cleaned_hourly,
+  train_perc = .6,
+  validation_perc = .2,
+  embargo = 0,
+  save = TRUE,
+  return_split = FALSE,
+  output_dir = "data/cleaned_data/split_hourly"
+)
+
+
+
+
+
+
+

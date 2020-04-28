@@ -1,6 +1,9 @@
 # clean environment
 rm(list = ls())
 
+# --------------------------------------------------------------------
+# 0) Load libraries
+# --------------------------------------------------------------------
 
 # Data manipulation libraries
 library(plyr)
@@ -20,18 +23,19 @@ library(forecast)
 library(GGally)
 library(patchwork)
 library(GGally)
+
 # other
-
-
 library(tictoc) # measures the time of the script
 
 # own functions
-source("code/functions/save_output.R")
-source("code/functions/create_features.R")
-source("code/functions/split_data.R")
-source("code/functions/save_output.R")
+source("analysis/functions/save_output.R")
+source("analysis/functions/create_features.R")
+source("analysis/functions/save_output.R")
 
-# Global parameters ---------------------------------------
+# --------------------------------------------------------------------
+# 1) Global Paramaters
+# --------------------------------------------------------------------
+
 
 # colors
 cbPalette <- c(
@@ -51,25 +55,15 @@ LEGEND <- theme(legend.title = element_blank())
 # read data
 tic("Exploratory Data Analysis") # start timing
 
-# perform exploratory data analysis on training data
-df <- readRDS('data/cleaned_data/final_tot_c.Rda') %>%
-  as_tsibble(index = date) %>%
-  split_data(
-    df = .,
-    train_perc = .6,
-    validation_perc = .2,
-    embargo = 0,
-    save = TRUE
-  ) %>%
-  # create lags
-  lapply(.,
-         create_lags,
-         var = "total_cs",
-         lags = seq(from = 1, to = 672, by = 1)) %>%
-  list2env(envir = .GlobalEnv)
 
-# remove validataion/train_validation/test set
-rm(validation, train_validation, test)
+# --------------------------------------------------------------------
+# 1) Read in data (Training data) and perform some data manipulations
+# --------------------------------------------------------------------
+
+# perform exploratory data analysis on training data
+train <- readRDS('data/cleaned_data/split_original/train.Rda') %>%
+  create_lags(var = "total_cs",
+              lags = seq(from = 1, to = 672, by = 1))
 
 # how to encode time based features
 # https://ianlondon.github.io/blog/encoding-cyclical-features-24hour-time/
@@ -118,13 +112,16 @@ train_features$week_day <- mapvalues(
   to = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 )
 
-
 # start and end date
 train_features %>% head()
 train_features %>% tail()
 summary(train_features$total_cs)
 train_features$date %>% diff.Date() %>% as.integer() %>% summary()
 
+
+# --------------------------------------------------------------------
+# 2) Data exploration
+# --------------------------------------------------------------------
 
 # general overview plot
 p_overview_line <-
@@ -275,6 +272,7 @@ p_season <- ggplot(train_features, aes(x = season, y = total_cs)) +
 p_season
 
 
+
 # profile plot
 season_profile <-
   train_features[c("hour", "season", "total_cs")] %>%
@@ -298,14 +296,17 @@ p_season_profile
 
 # add all relevant figures together
 ((p_week_profile) / (p_season_profile + p_weekday_profile)) +
-plot_layout(heights = c(5, 4))
+  plot_layout(heights = c(5, 4))
 
-save_output(output_dir = "output/figures", 
-            FUN=ggsave,filename = "figure2.png", 
-            device = "png",
-            height = 14,
-            width = 21,
-            unit = "cm")
+save_output(
+  output_dir = "output/figures",
+  FUN = ggsave,
+  filename = "figure2.png",
+  device = "png",
+  height = 14,
+  width = 21,
+  unit = "cm"
+)
 
 # year
 p_year <- ggplot(train_features, aes(x = year, y = total_cs)) +
@@ -322,7 +323,7 @@ p_pacf <- ggPacf(train_features$total_cs, lag = 672) +
 
 (p_acf / p_pacf)
 
-+
+
 # construct pairplot
 pairplot <- train_features %>%
   select(total_cs,
@@ -342,16 +343,21 @@ pairplot[1:nrow(pairplot), 1:5] %>%
       "total_cs_lag096",
       "total_cs_lag672"
     ),
-    lower = list(continuous = wrap("points", alpha = 0.7,    size=0.8)),
+    lower = list(continuous = wrap(
+      "points", alpha = 0.7,    size = 0.8
+    )),
     columnLabels = c("Cons", "Cons_lag001",
                      "Cons_lag096", "Cons_lag672")
   ) + THEME
 
-save_output(output_dir = "output/figures", 
-            FUN=ggsave,filename = "figure3.png", 
-            device = "png",
-            height = 8,
-            width = 12,
-            unit = "cm")
+save_output(
+  output_dir = "output/figures",
+  FUN = ggsave,
+  filename = "figure3.png",
+  device = "png",
+  height = 14,
+  width = 21,
+  unit = "cm"
+)
 
 toc("Exploratory Data Analysis") # end timing

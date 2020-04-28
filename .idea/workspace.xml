@@ -2,24 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="742e79e2-35d8-4dd8-887d-a5826eef407f" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/code/data_cleaning.R" beforeDir="false" afterPath="$PROJECT_DIR$/code/data_cleaning.R" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/code/exploratory_data_analysis.r" beforeDir="false" afterPath="$PROJECT_DIR$/code/exploratory_data_analysis.r" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code/functions/read_data.R" beforeDir="false" afterPath="$PROJECT_DIR$/code/functions/read_data.R" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code/functions/save_output.R" beforeDir="false" afterPath="$PROJECT_DIR$/code/functions/save_output.R" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code/functions/split_data.R" beforeDir="false" afterPath="$PROJECT_DIR$/code/functions/split_data.R" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code/functions/visualization.R" beforeDir="false" afterPath="$PROJECT_DIR$/code/functions/visualization.R" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/fifthplay/cleaned_data/finalTotC.Rda" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/fifthplay/cleaned_data/finalTotC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/fifthplay/consumptionTR1.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/fifthplay/consumptionTR2.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/fifthplay/injectionTR1.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/fifthplay/injectionTR2.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/fifthplay/pvGeneration.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/fluvius/consumption.csv" beforeDir="false" afterPath="$PROJECT_DIR$/data/fluvius/consumption.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/fluvius/injection.csv" beforeDir="false" afterPath="$PROJECT_DIR$/data/fluvius/injection.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/fluvius/pv.csv" beforeDir="false" afterPath="$PROJECT_DIR$/data/fluvius/pv.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/functions_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/data/retrieve_data/get_data.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/get_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/data/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/output/presentation/Intermetidate_presentation.pptx" beforeDir="false" afterPath="$PROJECT_DIR$/output/presentation/Intermetidate_presentation.pptx" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -33,7 +18,7 @@
   <component name="ProjectId" id="1ZvugsvylZxUKrpsBQChNJyHCxU" />
   <component name="PropertiesComponent">
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../../Semester2/Text_And_Information_ Based_Retrieval/Project/information_retrieval" />
     <property name="settings.editor.selected.configurable" value="preferences.sourceCode.Python" />
   </component>
   <component name="RecentsManager">
@@ -88,6 +73,7 @@
       <option name="presentableId" value="Default" />
       <updated>1585732002423</updated>
       <workItem from="1585732007025" duration="7774000" />
+      <workItem from="1586349352668" duration="53000" />
     </task>
     <servers />
   </component>
@@ -99,7 +85,9 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="COLUMN_ORDER" />
+            </State>
           </value>
         </entry>
       </map>

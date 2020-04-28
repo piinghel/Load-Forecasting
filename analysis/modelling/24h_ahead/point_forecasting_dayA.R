@@ -34,11 +34,11 @@ library(reshape2)
 library(forecast) # (partial) autocorrelation plots
 
 # custom functions
-source("code/functions/split_data.R")
-source("code/functions/create_features.R")
-source("code/functions/error_analysis.R")
-source("code/functions/tidy_model_helper.R")
-source("code/functions/save_output.R")
+source("analysis/functions/split_data.R")
+source("analysis/functions/create_features.R")
+source("analysis/functions/error_analysis.R")
+source("analysis/functions/tidy_model_helper.R")
+source("analysis/functions/save_output.R")
 
 
 # library(doParallel)
@@ -89,15 +89,12 @@ NUM_VIP <- 10
 #=====================================================#
 #  import data and split data
 #=====================================================#
-list_df<-readRDS('data/fifthplay/Cleaned_data/finalTotC.Rda') %>% 
+
+list_df <- readRDS('data/cleaned_data/final_tot_c.Rda') %>% 
   # sample a certain fraction to try out some things (work faster)
   slice(., 1:20000) %>%
-  as_tsibble(index=Date) %>%
-  # rename target some features
-  dplyr::rename(
-    total_cs = TotalCs_imp,
-    date = Date
-  ) %>% index_by(
+  as_tsibble(index=date) %>%
+  index_by(
     # there is a difference between floor_date and ceiling_date
     date_h = lubridate::floor_date(date, "1 hour")
     ) %>% 
