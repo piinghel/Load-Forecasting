@@ -900,8 +900,7 @@ pairplot_resid <- pred_long %>% select(date,residual,model) %>%
 ggpairs(pairplot_resid[,2:ncol(pairplot_resid)]) + THEME
 
 
-
-
+ 
 
 
 

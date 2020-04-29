@@ -100,9 +100,16 @@ visualize_pred <- function(df = NULL,
                            max_lags = 60,
                            treshold_qq = 5000,
                            interactive = TRUE,
-                           theme  = theme_minimal(),
-                           legend = theme(legend.title = element_blank()),
+                           theme_style  = theme_minimal(),
+                           legend_style = theme(legend.title = element_blank()),
                            FUN = forecast::ggPacf,
+                           legend_justification = c("right", "top"),
+                           legend_text_size = 10,
+                           legend_direction = "vertical",
+                           legend_position = c(.99,.99),
+                           color_h_line = "grey",
+                           size_h_line = .5,
+                           static_height = c(3,2,2),
                            ...) {
   # determine y label autocorrelation function
   label_y_p3 <- "PACF"
@@ -120,14 +127,18 @@ visualize_pred <- function(df = NULL,
   # plot fitted and acutal values (static)
   p1 <- ggplot(df_wide, aes(x = date, y = value)) +
     geom_line(aes(color = variable, linetype = variable)) +
-    geom_hline(
-      yintercept = 0,
-      size = .5,
-      color = "grey",
-      linetype = "dashed"
-    ) +
     scale_color_manual(values = c("#00AFBB", "red")) +
-    labs(x = "", y = "Consumption") + theme + legend
+    legend_style +
+    theme_style +
+    theme(
+      legend.position = legend_position,
+      legend.justification = legend_justification,
+      legend.text = element_text(size = legend_text_size),
+      legend.direction = legend_direction,
+      legend.background=element_blank(),
+      legend.title = element_blank()
+    ) +
+    labs(x = "", y = "Consumption") 
   p1_i <- ggplotly(p1)
   
   
@@ -136,17 +147,17 @@ visualize_pred <- function(df = NULL,
     ggplot(df, aes(x = date, y = residuals)) + geom_line(color = "#009E73") +
     geom_hline(
       yintercept = 0,
-      size = .5,
-      color = "grey",
+      size = size_h_line,
+      color = color_h_line,
       linetype = "dashed"
     ) +
-    labs(y = "Consumption") + labs(x = "Date", y = "Residuals") + theme
+    labs(y = "Consumption") + labs(x = "Date", y = "Residuals") + theme_style
   p2_i <- ggplotly(p2)
   
   # (Partial) autocorrelation plot (static)
   p3 <- FUN(df["residuals"], plot = TRUE, lag.max = max_lags) +
     theme(legend.title = element_blank()) + ggtitle("") +
-    labs(x = "Lag", y = label_y_p3) + theme
+    labs(x = "Lag", y = label_y_p3) + theme_style
   
   p3_i <- ggplotly(p3)
   
@@ -162,13 +173,13 @@ visualize_pred <- function(df = NULL,
   p4 <- ggplot(df[sample(1:nrow(df), n), ],
                aes(sample = residuals)) +
     stat_qq() + stat_qq_line() + labs(x = "Sample", y = "Theoretical") +
-    theme_minimal()
+    theme_style
   
   p4_i <- ggplotly(p4)
   
   # return static plot
   if (interactive == FALSE) {
-    return(((p1 / p2) / (p3 + p4)))
+    return(((p1 / p2) / (p3 + p4)) + plot_layout(heights= static_height))
   }
   # make the interactive plot
   plotly::subplot(

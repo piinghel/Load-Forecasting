@@ -33,7 +33,7 @@ source("analysis/functions/split_data.R")
 tic("Data Cleaning") # start timing
 
 # --------------------------------------------------------------------
-#  1) Global parameters 
+#  1) Global parameters
 # --------------------------------------------------------------------
 
 # colors
@@ -52,7 +52,7 @@ THEME <- theme_gray() #theme_minimal()
 LEGEND <- theme(legend.title = element_blank())
 
 # --------------------------------------------------------------------
-#  2) Load Data 
+#  2) Load Data
 # --------------------------------------------------------------------
 
 # --------------------------------------------------------------------
@@ -61,7 +61,7 @@ LEGEND <- theme(legend.title = element_blank())
 
 # read in data fifthplay
 fifth <- get_data(dir = "data/fifthplay/",
-                  vars = c("DateTimeMeasurement", "Value")) 
+                  vars = c("DateTimeMeasurement", "Value"))
 
 # some summary stats
 lapply(fifth, summary)
@@ -92,8 +92,8 @@ subset_data <- function(df, start, end, vars = NULL) {
   df[df$date >= start & df$date <= end, vars]
 }
 
-fifth$consumption_tr1[2:dim(fifth$consumption_tr1)[1], ][fifth_timediff$consumption_tr1 ==
-                                                         35700.00, ]
+fifth$consumption_tr1[2:dim(fifth$consumption_tr1)[1],][fifth_timediff$consumption_tr1 ==
+                                                          35700.00,]
 
 # for example there is almost a month between these two dates
 # this might be probablematic for modelling, espically such long periods
@@ -228,7 +228,7 @@ cs_fluv_fifth <- left_join(fluv_cs, fifth_total_cs, by = 'date')
 
 # rename columns
 cs_fluv_fifth <- plyr::rename(cs_fluv_fifth,
-                             c("active" = "fluvius", "value" = "fifthplay"))
+                              c("active" = "fluvius", "value" = "fifthplay"))
 
 # visualize
 # compare comsumption between fifth and fluvius
@@ -260,14 +260,15 @@ dim(fifth_total_injection)
 
 # left outer join based on same date
 # this will result in NA values
-inj_fluv_fifth <- left_join(fluv_inj, fifth_total_injection, by = 'date')
+inj_fluv_fifth <-
+  left_join(fluv_inj, fifth_total_injection, by = 'date')
 head(inj_fluv_fifth)
 dim(inj_fluv_fifth)
 
 
 # rename columns
 inj_fluv_fifth <- plyr::rename(inj_fluv_fifth,
-                              c("active" = "fluvius", "value" = "fifthplay"))
+                               c("active" = "fluvius", "value" = "fifthplay"))
 
 # compare comsumption between fifth and fluvius
 comp_inj <- compare_fifthFluv(df = inj_fluv_fifth,
@@ -310,7 +311,7 @@ pvGen_fluvFifth <- plyr::rename(pv_gen_fluvFifth,
 
 # compare comsumption between fifth and fluvius
 comp_pv <- compare_fifthFluv(df = pvGen_fluvFifth,
-                                freq = 'daily', ylab = "Pv Generation")
+                             freq = 'daily', ylab = "Pv Generation")
 comp_pv$figure + THEME
 
 # overview plot
@@ -369,20 +370,24 @@ tail(fluv_fifth_tot_c)
 
 compare_totalcs <- fluv_fifth_tot_c %>%
   select(date, fluv_total_cs, fifth_total_cs) %>%
-  plyr::rename(., c("fluv_total_cs" = "fluvius", "fifth_total_cs" = "fifthplay")) %>%
+  plyr::rename(.,
+               c("fluv_total_cs" = "fluvius", "fifth_total_cs" = "fifthplay")) %>%
   compare_fifthFluv(df = ., freq = '15 min', ylab = "Total Consumption")
 
 compare_totalcs$figure + geom_line(alpha = .5) +
   labs(colour = "") + scale_color_brewer(palette = "Set1") + THEME +
-  theme(legend.position = "top") + labs(x="Date", y="Total Building Consumption")
+  theme(legend.position = "top") + labs(x = "Date", y = "Total Building Consumption")
 
 # save figure
-save_output(output_dir = "output/figures", 
-            FUN=ggsave,filename = "figure1.png", 
-            device = "png",
-            height = 9,
-            width = 12,
-            unit = "cm")
+save_output(
+  output_dir = "output/figures",
+  FUN = ggsave,
+  filename = "figure1.png",
+  device = "png",
+  height = 9,
+  width = 12,
+  unit = "cm"
+)
 
 # scatterplot
 ggplot(compare_totalcs$dataframe,
@@ -407,7 +412,7 @@ ggplot(melt(compare_totalcs$dataframe[2:3]),
 # date and Imputed column of fifthplay
 df_fifth_cleaned <- fluv_fifth_tot_c %>%
   mutate(total_cs = if_else(is.na(fifth_total_cs),
-                               fluv_total_cs, fifth_total_cs)) %>%
+                            fluv_total_cs, fifth_total_cs)) %>%
   select(c(date, total_cs))
 
 
@@ -416,7 +421,7 @@ anyNA(df_fifth_cleaned$total_cs)
 
 # dates should be unique
 df_fifth_cleaned
-head(df_fifth_cleaned[df_fifth_cleaned$date > "2017-10-29", ], 20)
+head(df_fifth_cleaned[df_fifth_cleaned$date > "2017-10-29",], 20)
 
 
 # interval should be 15 min
@@ -429,11 +434,9 @@ df_fifth_cleaned %>% filter(total_cs == 0) %>% nrow
 
 # impute zero values
 df_fifth_cleaned$total_cs <-
-  na.spline(replace(
-    df_fifth_cleaned$total_cs,
-    df_fifth_cleaned$total_cs == 0,
-    NA
-  ))
+  na.spline(replace(df_fifth_cleaned$total_cs,
+                    df_fifth_cleaned$total_cs == 0,
+                    NA))
 
 # interval should be still 15 min
 diff(df_fifth_cleaned$date) %>% as.integer %>% summary
@@ -453,7 +456,7 @@ save_output(
   FUN = write.csv,
   x = df_fifth_cleaned,
   file = "final_tot_c",
-  row.names=FALSE
+  row.names = FALSE
 )
 
 
@@ -481,17 +484,13 @@ split_data(
 
 # 2) summarize to hourly units
 
-df_fifth_cleaned_hourly <- df_fifth_cleaned %>% 
+df_fifth_cleaned_hourly <- df_fifth_cleaned %>%
   
-  tsibble::index_by(
-  # there is a difference between floor_date and ceiling_date
-  date_h = lubridate::floor_date(date, "1 hour")
-  ) %>% 
+  tsibble::index_by(# there is a difference between floor_date and ceiling_date
+    date_h = lubridate::floor_date(date, "1 hour")) %>%
   dplyr::summarise(total_cs = sum(total_cs)) %>%
   # again rename
-  dplyr::rename(
-    date = date_h
-)
+  dplyr::rename(date = date_h)
 
 split_data(
   df = df_fifth_cleaned_hourly,
@@ -502,10 +501,3 @@ split_data(
   return_split = FALSE,
   output_dir = "data/cleaned_data/split_hourly"
 )
-
-
-
-
-
-
-
