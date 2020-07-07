@@ -1,9 +1,3 @@
-
-
-
-
-
-
 #' Summarized and visualized data using the interactive library plotly
 #'
 #' @param df: tsibble dataframe

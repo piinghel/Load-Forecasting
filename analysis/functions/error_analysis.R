@@ -1,4 +1,10 @@
 
+
+
+
+
+
+
 #  shows largest errors
 #' @export
 #' @param pred: A tibble containg the id .pred .row
@@ -99,6 +105,9 @@ prep_visualize_pred <- function(df = NULL,
 visualize_pred <- function(df = NULL,
                            max_lags = 60,
                            treshold_qq = 5000,
+                           probablistic = FALSE,
+                           lower = NULL,
+                           upper = NULL,
                            interactive = TRUE,
                            theme_style  = theme_minimal(),
                            legend_style = theme(legend.title = element_blank()),
@@ -106,10 +115,11 @@ visualize_pred <- function(df = NULL,
                            legend_justification = c("right", "top"),
                            legend_text_size = 10,
                            legend_direction = "vertical",
-                           legend_position = c(.99,.99),
+                           legend_position = c(.99, .99),
                            color_h_line = "grey",
                            size_h_line = .5,
-                           static_height = c(3,2,2),
+                           static_height = c(3, 2, 2),
+                           prob_fill_color = "grey70",
                            ...) {
   # determine y label autocorrelation function
   label_y_p3 <- "PACF"
@@ -119,26 +129,47 @@ visualize_pred <- function(df = NULL,
   }
   
   df <- df %>% mutate(residuals = actual - fitted)
-  df_wide <- df %>%
-    select(date, actual, fitted) %>%
-    gather(key = "variable", value = "value", -date)
-  
-  
-  # plot fitted and acutal values (static)
-  p1 <- ggplot(df_wide, aes(x = date, y = value)) +
-    geom_line(aes(color = variable, linetype = variable)) +
+  p1 <- ggplot(df, aes(x = date, y = actual)) +
+    geom_line(color = "#00AFBB", linetype = "dashed", size = .9) +
     scale_color_manual(values = c("#00AFBB", "red")) +
-    legend_style +
-    theme_style +
+    geom_line(aes(x = date, y = fitted),
+              color = "red",
+              linetype = "dotted", size = .9) +
+              {
+                if (probablistic &
+                    !is.null(lower) & !is.null(upper))
+                  geom_ribbon(
+                    aes(
+                      ymin = !!dplyr::sym(lower),
+                      ymax = !!dplyr::sym(upper)
+                    ),
+                    fill = prob_fill_color,
+                    alpha = .5
+                  )
+              } +
+    
+              {
+                if (probablistic &
+                    !is.null(lower) & !is.null(upper))
+                  geom_line(aes(x = date, y = !!dplyr::sym(lower)), color = prob_fill_color)
+              } +
+              {
+                if (probablistic &
+                    !is.null(lower) & !is.null(upper))
+                  geom_line(aes(x = date, y = !!dplyr::sym(upper)), color = prob_fill_color)
+              } +
     theme(
       legend.position = legend_position,
       legend.justification = legend_justification,
       legend.text = element_text(size = legend_text_size),
       legend.direction = legend_direction,
-      legend.background=element_blank(),
+      legend.background = element_blank(),
       legend.title = element_blank()
     ) +
-    labs(x = "", y = "Consumption") 
+    labs(x = "", y = "Consumption")
+  
+  
+  
   p1_i <- ggplotly(p1)
   
   
@@ -179,7 +210,7 @@ visualize_pred <- function(df = NULL,
   
   # return static plot
   if (interactive == FALSE) {
-    return(((p1 / p2) / (p3 + p4)) + plot_layout(heights= static_height))
+    return(((p1 / p2) / (p3 + p4)) + plot_layout(heights = static_height))
   }
   # make the interactive plot
   plotly::subplot(
@@ -267,7 +298,8 @@ compare_pred_models <- function(df,
     size = .5
   }
   # compare predictions of all models
-  p_compare_pred <- ggplot(df_long_update, aes(x = date, y = fitted)) +
+  p_compare_pred <-
+    ggplot(df_long_update, aes(x = date, y = fitted)) +
     geom_line(aes(color = model, linetype = model), size = size) +
     scale_color_brewer(palette = "Dark2") +
     theme_minimal() + theme(legend.position = "top") +
