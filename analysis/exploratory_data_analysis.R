@@ -52,6 +52,10 @@ cbPalette <- c(
 THEME <- theme_gray() # theme_minimal()
 LEGEND <- theme(legend.title = element_blank())
 
+# to save figures
+DPI <- 500
+DEVICE <- "pdf"
+
 # read data
 tic("Exploratory Data Analysis") # start timing
 
@@ -61,9 +65,11 @@ tic("Exploratory Data Analysis") # start timing
 # --------------------------------------------------------------------
 
 # perform exploratory data analysis on training data
-train <- readRDS('data/cleaned_data/split_original/train.Rda') %>%
+train <- readRDS('data/cleaned_data/split_hourly/train.Rda') %>%
   create_lags(var = "total_cs",
-              lags = seq(from = 1, to = 672, by = 1))
+              lags = c(1, seq(
+                from = 24, to = 168, by = 24
+              )))
 
 # how to encode time based features
 # https://ianlondon.github.io/blog/encoding-cyclical-features-24hour-time/
@@ -128,7 +134,8 @@ p_overview_line <-
   ggplot(train_features, aes(x = date, y = total_cs)) +
   geom_line(size = .8, col = cbPalette[4]) + ylab("Total Consumption") +
   labs(x = "Date") + THEME
-p_overview_line %>% ggplotly()
+# p_overview_line %>% ggplotly()
+p_overview_line
 
 p_overview_hist <- ggplot(train_features, aes(total_cs)) +
   geom_histogram(color = cbPalette[7],
@@ -171,7 +178,8 @@ p_night <-
 
 # Weekend and non-weekend days
 p_day_type <- ggplot(data = train_features, aes(x = date,
-                                                y = total_cs, col = day_type)) + geom_line(alpha = .8, size = .8) +
+                                                y = total_cs, col = day_type)) +
+  geom_line(alpha = .8, size = .8) +
   labs(y = "Total Consumption", x = "") + theme(legend.position = "bottom") +
   scale_color_brewer(palette = "Dark2") + labs(x = "Date") +
   THEME + LEGEND
@@ -224,8 +232,8 @@ p_weekday_profile <- ggplot(data = weekday_profile,
                             )) +
   geom_line(aes(color = week_day, linetype = week_day)) +
   scale_color_brewer(palette = "Dark2") +
-  geom_point(aes(color = week_day)) +
-  ylab("Mean consumption") +
+  geom_point(aes(color = week_day, shape = week_day)) +
+  ylab("Mean consumption (kWh)") +
   xlab("Hour") +
   THEME + LEGEND
 p_weekday_profile
@@ -252,7 +260,7 @@ p_week_profile <-
     linetype = 2,
     size = .5
   ) +
-  labs(x = "Time (hourly)", y = "Mean cons. (1 stdev.)") + THEME +
+  labs(x = "Time (hourly resolution)", y = "Mean cons. + 1 stdev (kWh)") + THEME +
   annotate(
     "Text",
     x = seq(15, 168, 23),
@@ -261,8 +269,7 @@ p_week_profile <-
   )
 
 p_week_profile
-p_week_profile %>% ggplotly()
-
+#p_week_profile %>% ggplotly()
 
 
 # season
@@ -287,7 +294,7 @@ p_season_profile <- ggplot(data = season_profile,
                              group = season
                            )) +
   geom_line(aes(color = season, linetype = season)) +
-  geom_point(aes(color = season)) +
+  geom_point(aes(color = season, shape = season)) +
   scale_color_brewer(palette = "Dark2") +
   ylab("Mean Consumption") +
   xlab("Hour") + THEME + LEGEND
@@ -296,15 +303,16 @@ p_season_profile
 
 # add all relevant figures together
 ((p_week_profile) / (p_season_profile + p_weekday_profile)) +
-  plot_layout(heights = c(5, 4))
+  plot_layout(heights = c(1, 1)) + plot_annotation(tag_levels = 'A') 
 
 save_output(
-  output_dir = "output/figures",
+  output_dir = "output/figures/chapter2",
   FUN = ggsave,
-  filename = "figure2.png",
-  device = "png",
-  height = 14,
-  width = 21,
+  filename = paste0("figure2.",DEVICE),
+  dpi = DPI,
+  device = DEVICE,
+  height = 15,
+  width = 25,
   unit = "cm"
 )
 
@@ -316,9 +324,9 @@ p_year
 
 
 # look at lags
-p_acf <- ggAcf(train_features$total_cs, lag = 672) +
+p_acf <- ggAcf(train_features$total_cs, lag = 168) +
   ggtitle("") + THEME
-p_pacf <- ggPacf(train_features$total_cs, lag = 672) +
+p_pacf <- ggPacf(train_features$total_cs, lag = 168) +
   ggtitle("") + THEME
 
 (p_acf / p_pacf)
@@ -328,8 +336,8 @@ p_pacf <- ggPacf(train_features$total_cs, lag = 672) +
 pairplot <- train_features %>%
   select(total_cs,
          total_cs_lag001,
-         total_cs_lag096,
-         total_cs_lag672,
+         total_cs_lag024,
+         total_cs_lag168,
          year)
 
 pairplot[1:nrow(pairplot), 1:5] %>%
@@ -340,24 +348,29 @@ pairplot[1:nrow(pairplot), 1:5] %>%
     columns = c(
       "total_cs",
       "total_cs_lag001",
-      "total_cs_lag096",
-      "total_cs_lag672"
+      "total_cs_lag024",
+      "total_cs_lag168"
     ),
     lower = list(continuous = wrap(
       "points", alpha = 0.7,    size = 0.8
     )),
     columnLabels = c("Cons", "Cons_lag001",
-                     "Cons_lag096", "Cons_lag672")
+                     "Cons_lag024", "Cons_lag168")
   ) + THEME
 
 save_output(
-  output_dir = "output/figures",
+  output_dir = "output/figures/chapter2",
   FUN = ggsave,
-  filename = "figure3.png",
-  device = "png",
+  filename = paste0("figure3.",DEVICE),
+  dpi = DPI,
+  device = DEVICE,
   height = 14,
   width = 21,
   unit = "cm"
 )
 
 toc("Exploratory Data Analysis") # end timing
+
+
+
+

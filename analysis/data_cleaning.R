@@ -7,6 +7,7 @@ rm(list = ls())
 
 # data manipulation
 library(tsibble)
+library(tibble)
 library(tidyverse)
 library(lubridate)
 library(plyr)
@@ -15,10 +16,12 @@ library(zoo) # to impute zero values
 library(tibbletime)
 library(tictoc) # measures the time of the script
 library(Hmisc) # for the correlation function
+library(imputeTS) # interpolation
 
 # visualize
 library(plotly)
 library(GGally)
+library(patchwork)
 
 # own functions
 source("analysis/functions/read_data.R")
@@ -51,6 +54,10 @@ cbPalette <- c(
 THEME <- theme_gray() #theme_minimal()
 LEGEND <- theme(legend.title = element_blank())
 
+# to save figures
+DPI <- 500
+DEVICE <- "pdf"
+
 # --------------------------------------------------------------------
 #  2) Load Data
 # --------------------------------------------------------------------
@@ -73,8 +80,6 @@ lapply(fifth, anyNA)
 fifth_timediff <- lapply(fifth, function(df)
   diff(df$date))
 
-
-format_iso_8601
 
 # there are periods of jumps sometimes weeks of missing data
 # therefore when comparing data with fluvious check if timestamps match
@@ -355,7 +360,7 @@ fluv_fifth_tot_c <- tibble(
       pvGen_fluvFifth$fifthplay -
       inj_fluv_fifth$fifthplay
   )
-) %>% as_tsibble(., index = date)
+)
 
 # interval is 15 min
 summary(as.integer(diff(fluv_fifth_tot_c$date)))
@@ -372,22 +377,80 @@ compare_totalcs <- fluv_fifth_tot_c %>%
   select(date, fluv_total_cs, fifth_total_cs) %>%
   plyr::rename(.,
                c("fluv_total_cs" = "fluvius", "fifth_total_cs" = "fifthplay")) %>%
-  compare_fifthFluv(df = ., freq = '15 min', ylab = "Total Consumption")
+  mutate(difference = fluvius - fifthplay)
 
-compare_totalcs$figure + geom_line(alpha = .5) +
-  labs(colour = "") + scale_color_brewer(palette = "Set1") + THEME +
-  theme(legend.position = "top") + labs(x = "Date", y = "Total Building Consumption")
 
-# save figure
-save_output(
-  output_dir = "output/figures",
-  FUN = ggsave,
-  filename = "figure1.png",
-  device = "png",
-  height = 9,
-  width = 12,
-  unit = "cm"
-)
+p1 <- compare_totalcs %>%
+  melt(., id = "date") %>%
+  filter(variable != "difference") %>%
+  ggplot(., aes(x = date, y = value, color = variable)) +
+  geom_line(alpha = .3, size = .3) +
+  geom_point(alpha = 3, size = .3) +
+  scale_color_manual("",
+                     labels = c("Fluvius", "Fifthplay"),
+                     values = cbPalette[6:8]) +
+  labs(x = "", y = "Total building consumption (kWh)") +
+  theme(legend.position = "top",
+        legend.text = element_text(size = 13)) + 
+  guides(color = guide_legend(override.aes = list(size = 1.2))) +
+  geom_vline(
+    xintercept = as.numeric(compare_totalcs$date[c(nrow(compare_totalcs) * 0.6,
+                                                   nrow(compare_totalcs) * 0.8)]),
+    linetype = "dashed",
+    size = .7,
+    colour = "black"
+  ) +
+  annotate(
+    geom = "text",
+    x = compare_totalcs$date[nrow(compare_totalcs) * .3],
+    y = 90,
+    label = "Training",
+    color = "black"
+  ) +
+  annotate(
+    geom = "text",
+    x = compare_totalcs$date[nrow(compare_totalcs) * .7],
+    y = 90,
+    label = "Validation",
+    color = "black"
+  ) +
+  annotate(
+    geom = "text",
+    x = compare_totalcs$date[nrow(compare_totalcs) * .9],
+    y = 90,
+    label = "Test",
+    color = "black"
+  )
+
+
+
+p2 <- compare_totalcs  %>%
+  ggplot(., aes(x = date, y = difference)) +
+  geom_point(alpha = .5,
+             size = .3,
+             colour = "Black") +
+  labs(x = "Time (15 minute resolution)", y = "Differences (kWh)")
+
+
+
+# (p1 / p2) + plot_layout(heights = c(5, 3), guides = "collect") +
+#   plot_layout(guides = "collect") & 
+#   plot_annotation(tag_levels = 'A') &
+#   theme(legend.position = 'top')
+# 
+# 
+# 
+# # save figure
+# save_output(
+#   output_dir = "output/figures/chapter2",
+#   FUN = ggsave,
+#   filename = paste0("figure1.", DEVICE),
+#   dpi = DPI,
+#   device = DEVICE,
+#   height = 15,
+#   width = 20,
+#   unit = "cm"
+# )
 
 # scatterplot
 ggplot(compare_totalcs$dataframe,
@@ -427,22 +490,34 @@ head(df_fifth_cleaned[df_fifth_cleaned$date > "2017-10-29",], 20)
 # interval should be 15 min
 diff(df_fifth_cleaned$date) %>% as.integer() %>% summary()
 
-# zero values in the dataset
+# zero or low values in the dataset
 df_fifth_cleaned$total_cs %>% summary()
-df_fifth_cleaned %>% filter(total_cs == 0) %>% nrow
+df_fifth_cleaned %>% filter(total_cs < 10) %>% nrow
+
+# interpolate
+interpol_val <- df_fifth_cleaned %>% mutate(
+  total_cs =  
+    replace(df_fifth_cleaned$total_cs, 
+            df_fifth_cleaned$total_cs < 10, 
+            NA)
+) %>% select(total_cs) %>% pull %>% 
+  as.ts %>% na_interpolation(., option = "stine")
+
+df_fifth_cleaned <- df_fifth_cleaned %>% mutate(total_cs = interpol_val) 
+
+# check interpol
+df_fifth_cleaned %>%
+  filter(date > "2019-10-22" & date < "2019-10-29") %>%
+  ggplot(aes(x = date, y = total_cs)) + geom_point()
 
 
-# impute zero values
-df_fifth_cleaned$total_cs <-
-  na.spline(replace(df_fifth_cleaned$total_cs,
-                    df_fifth_cleaned$total_cs == 0,
-                    NA))
 
 # interval should be still 15 min
 diff(df_fifth_cleaned$date) %>% as.integer %>% summary
 
 df_fifth_cleaned %>% select(date) %>% duplicated %>% sum
 
+df_fifth_cleaned %>% select(total_cs) %>% summary
 
 
 # --------------------------------------------------------------------
@@ -482,14 +557,13 @@ split_data(
 )
 
 
+
 # 2) summarize to hourly units
 
-df_fifth_cleaned_hourly <- df_fifth_cleaned %>%
-  
-  tsibble::index_by(# there is a difference between floor_date and ceiling_date
-    date_h = lubridate::floor_date(date, "1 hour")) %>%
-  dplyr::summarise(total_cs = sum(total_cs)) %>%
-  # again rename
+df_fifth_cleaned_hourly <- df_fifth_cleaned %>% 
+  mutate(date_h = lubridate::floor_date(date, "1 hour")) %>%
+  dplyr::group_by(date_h) %>%
+  dplyr::summarise(total_cs = sum(total_cs))%>%
   dplyr::rename(date = date_h)
 
 split_data(
@@ -501,3 +575,4 @@ split_data(
   return_split = FALSE,
   output_dir = "data/cleaned_data/split_hourly"
 )
+

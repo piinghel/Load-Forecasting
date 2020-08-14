@@ -10,11 +10,12 @@ fix_dates <- function(df, vars = NULL) {
     vars = c(colnames(df))
   }
   df <-
-    df %>% select(vars) %>% plyr::rename(c("DateTimeMeasurement" = "Date"))
+    df %>% select(vars) %>% dplyr::rename(Date = DateTimeMeasurement)
   # lowercase columns
   colnames(df) <- tolower(colnames(df))
   df$date <- ymd_hms(df$date, tz = "Europe/Brussels")
-  as_tsibble(df, index = date)
+  #as_tsibble(df, index = date)
+  return(df %>% as_tibble)
   
 }
 

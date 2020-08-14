@@ -1,24 +1,35 @@
 #' prepares and computes probablitic forecasting using a normal distribution 
 #'
-#' @param preds: 
-#' @param actuals: 
+#' @param df: 
 #' @param residuals_inSample: 
 #' @param alpha: 
 #' @return 
 
 
 prob_forecast_Un <-
-  function(preds = NULL,
-           actuals = NULL,
+  function(df = NULL,
            residuals_inSample = NULL,
-           alpha = 0.025) {
+           sd_norm = -100,
+           mean_norm = -100,
+           q_lower = 0.025,
+           q_upper = 0.975,
+           nr_samples = 100000) {
     if (is.null(residuals_inSample)) {
-      residuals_inSample = actuals$cs - preds$.pred
+      residuals_inSample = df$actual - df$fitted
       
     }
     
+    # compute standard deviation for prediction intervals
+    if (sd_norm == -100 & mean_norm == -100) {
+      mean_norm <- mean(residuals_inSample)
+      sd_norm <- sd(residuals_inSample)
+    }
+    
+    resid_q <-
+      rnorm(nr_samples, mean = mean_norm, sd = sd_norm) %>%
+      quantile(c(q_lower, q_upper)) %>% as.numeric
     tibble(
-      date = actuals$date,
+      date = df$date,
       week_day = lubridate::wday(date, label = TRUE),
       hour = lubridate::hour(date),
       day_type = as.factor(ifelse(
@@ -45,15 +56,16 @@ prob_forecast_Un <-
           )
         )
       ),
-      fitted =  preds$.pred,
-      actual = actuals$cs,
-      residual = fitted - actual,
-      lower_nU = fitted - qnorm(1 - alpha) * sd(residuals_inSample),
-      upper_nU = fitted + qnorm(1 - alpha) * sd(residuals_inSample),
+      fitted =  df$fitted,
+      actual = df$actual,
+      residual = actual - fitted ,
+      lower_nU = fitted + resid_q[1],
+      upper_nU = fitted + resid_q[2],
       cover_nU = actual >= lower_nU & actual <= upper_nU
     )
     
   }
+
 
 
 
@@ -95,3 +107,58 @@ conditional_bootstap <- function(pred = NULL,
   return(prob_dist)
   
 }
+
+
+
+
+conditional_bootstap_stepAhead <- function(pred = NULL,
+                                 historical_resid = NULL,
+                                 size = 1000,
+                                 group_var = "step_ahead") {
+  
+  # generate bootstraps
+  prob_dist <- historical_resid %>%
+    filter(., !!sym(group_var) == pred[[group_var]]) %>%
+    select(residual) %>% pull %>% sample(., size = size, replace = TRUE) %>%
+    as.matrix(nrow = size) %>% t() + pred[["fitted"]]
+  return(prob_dist)
+  
+}
+
+
+conditional_bootstap1 <- function(pred = NULL,
+                                           historical_resid = NULL,
+                                           size = 1000,
+                                           group_var = NULL) {
+  
+  # generate bootstraps
+  prob_dist <- historical_resid %>%
+    filter(., !!sym(group_var) == pred[[group_var]]) %>%
+    select(residual) %>% pull %>% sample(., size = size, replace = TRUE) %>%
+    as.matrix(nrow = size) %>% t() + pred[["fitted"]]
+  return(prob_dist)
+  
+}
+
+
+
+conditional_bootstap2 <- function(pred = NULL,
+                                           historical_resid = NULL,
+                                           size = 1000,
+                                           group_var1 = "day_type",
+                                           group_var2 = "month") {
+  
+  
+  # generate bootstraps
+  prob_dist <- historical_resid %>%
+    filter(., !!sym(group_var1) == pred[[group_var2]] & !!sym(group_var1) == pred[[group_var2]]) %>%
+    select(residual) %>% pull %>% sample(., size = size, replace = TRUE) %>%
+    as.matrix(nrow = size) %>% t() + pred[["fitted"]]
+  return(prob_dist)
+  
+}
+
+
+
+
+

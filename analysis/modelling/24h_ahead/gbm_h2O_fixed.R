@@ -12,6 +12,7 @@ library(tsibble)
 library(dplyr)
 library(forecast)
 
+
 # visualisations
 library(ggplot2)
 library(plotly)
@@ -66,16 +67,15 @@ set.seed(100)
 # parallel::detectCores(logical = TRUE)
 # cl <- makeCluster(2)
 
-# metric of interest
-METRIC <- "rsq_trad"
+
 
 # performance metrics
 PERF_METRIC_SET <- metric_set(mase_daily,
                               mase_weekly,
-                              rsq_trad,
+                              rsq,
                               mae,
                               rmse,
-                              smape)
+                              mape)
 
 PERF_METRIC_SET
 
@@ -224,9 +224,7 @@ explainer_train <- DALEX::explain(
   label = ""
 )
 
-model_parts(explainer = explainer_train, 
-            loss_function = loss_root_mean_square,
-            B = 1)
+
 
 vi_train <- model_parts(
   explainer = explainer_train,
@@ -268,7 +266,7 @@ predictions_val <- h2o.predict(h2o.fit_boost, newdata = validaton.h2o) %>%
 
 # save for comparison
 predictions_val %>% mutate(model = "boosting") %>%
-  write.csv("output/deterministic/val_boosting.csv", row.names = FALSE)
+  write.csv("output/deterministic/val_boostingH20.csv", row.names = FALSE)
 
 # Evaluate
 

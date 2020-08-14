@@ -21,15 +21,15 @@ split_data <-
            return_split = FALSE,
            ...) {
     
-    nr_obs <- dim(df)[1]
-    idx_endtrain <- nr_obs * train_perc
+    nr_obs <- df %>% nrow()
+    idx_endtrain <- floor(nr_obs * train_perc)
     # add one week between to remove autocorr
-    idx_begin_validation <- idx_endtrain + embargo
+    idx_begin_validation <- floor(idx_endtrain + embargo)
     idx_end_validation <-
-      idx_begin_validation + nr_obs * validation_perc
+      floor(idx_begin_validation + nr_obs * validation_perc)
     
     # add one week between to remove autocorr
-    idx_begin_test <- idx_end_validation + embargo
+    idx_begin_test <- floor(idx_end_validation + embargo)
     idx_end_test <- nr_obs
     
     # split into train, validation and test with 1 week between
